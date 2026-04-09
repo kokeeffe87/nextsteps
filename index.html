@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextStep — Sales Call Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #0a0a0a; --primary-dark: #000; --primary-light: #f5f5f5;
+            --bg: #fafafa; --border: #e5e5e5; --text: #0a0a0a; --muted: #737373;
+            --danger: #ef4444; --success: #16a34a; --warning: #d97706;
+            --sidebar-w: 240px;
+        }
+        body { font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 300; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+        /* ── SIDEBAR ── */
+        .sidebar { width: var(--sidebar-w); background: #0a0a0a; color: white; display: flex; flex-direction: column; position: fixed; height: 100vh; overflow-y: auto; z-index: 50; }
+        .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .logo-text { font-size: 20px; font-weight: 900; letter-spacing: -.5px; }
+        .logo-sub  { font-size: 11px; color: rgba(255,255,255,.35); margin-top: 2px; font-weight: 300; letter-spacing: .04em; }
+        .nav-section { padding: 12px 10px; }
+        .nav-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: rgba(255,255,255,.28); padding: 8px 10px 4px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 400; color: rgba(255,255,255,.6); border: none; background: none; width: 100%; text-align: left; transition: all .15s; font-family: inherit; }
+        .nav-item:hover  { background: rgba(255,255,255,.08); color: white; }
+        .nav-item.active { background: rgba(255,255,255,.12); color: white; font-weight: 500; }
+        .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+        .nav-badge { margin-left: auto; background: var(--danger); color: white; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 1px 7px; display: none; }
+        .sidebar-footer { margin-top: auto; padding: 12px 10px 20px; border-top: 1px solid rgba(255,255,255,.08); }
+
+        /* ── LAYOUT ── */
+        .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+        .topbar { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+        .page-title { font-size: 18px; font-weight: 900; letter-spacing: -.3px; }
+        .content { padding: 28px 32px; flex: 1; }
+        .card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+
+        /* ── STATS ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+        .stat-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; }
+        .stat-icon { font-size: 22px; margin-bottom: 10px; }
+        .stat-val  { font-size: 34px; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+        .stat-lbl  { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 400; }
+
+        /* ── CALL CARDS (dashboard) ── */
+        .call-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; gap: 16px; cursor: pointer; transition: all .15s; margin-bottom: 14px; }
+        .call-card:hover { border-color: #0a0a0a; box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+        .avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg,#404040,#0a0a0a); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+        .call-info { flex: 1; min-width: 0; }
+        .call-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+        .call-name { font-weight: 700; font-size: 15px; }
+        .call-date { font-size: 12px; color: var(--muted); }
+        .call-snip { font-size: 13px; color: var(--muted); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .call-foot { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+
+        /* ── BADGES ── */
+        .badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+        .badge-tasks  { background: #f5f5f5; color: #0a0a0a; }
+        .badge-topic  { background: #f5f5f5; color: #404040; }
+        .badge-high   { background: #fee2e2; color: #991b1b; }
+        .badge-medium { background: #fef3c7; color: #92400e; }
+        .badge-low    { background: #dcfce7; color: #166534; }
+        .badge-pos    { background: #dcfce7; color: #166534; }
+        .badge-neg    { background: #fee2e2; color: #991b1b; }
+
+        /* ── BUTTONS ── */
+        .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; white-space: nowrap; font-family: inherit; }
+        .btn-primary { background: #0a0a0a; color: white; }
+        .btn-primary:hover { background: #262626; }
+        .btn-danger  { background: var(--danger); color: white; }
+        .btn-outline { background: white; border: 1.5px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: #0a0a0a; color: #0a0a0a; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-sm { padding: 6px 14px; font-size: 13px; }
+        .btn-ghost { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 400; font-family: inherit; }
+        .btn-ghost:hover { color: #0a0a0a; }
+
+        /* ── FORMS ── */
+        .form-input  { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; font-weight: 300; color: var(--text); transition: border-color .15s; background: white; }
+        .form-input:focus { border-color: #0a0a0a; }
+        .form-select { width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; background: white; font-family: inherit; color: var(--text); cursor: pointer; }
+        .form-select:focus { border-color: #0a0a0a; }
+        .big-tx { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; line-height: 1.7; font-family: inherit; font-weight: 300; color: var(--text); outline: none; resize: vertical; transition: border-color .15s; background: white; }
+        .big-tx:focus { border-color: #0a0a0a; }
+
+        /* ── TABS ── */
+        .tab-list { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+        .tab-btn { padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--muted); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; font-family: inherit; }
+        .tab-btn.active { color: #0a0a0a; border-bottom-color: #0a0a0a; }
+
+        /* ── STEP BAR ── */
+        .steps { display: flex; align-items: center; margin-bottom: 28px; }
+        .step { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .step-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+        .step.done   .step-dot { background: #f5f5f5; color: #0a0a0a; border: 1.5px solid #d4d4d4; }
+        .step.active .step-dot { background: #0a0a0a; color: white; }
+        .step.idle   .step-dot { background: #f5f5f5; color: var(--muted); }
+        .step-label { color: var(--muted); font-weight: 400; }
+        .step.active .step-label { color: var(--text); font-weight: 700; }
+        .step-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; }
+        .step-line.done { background: #0a0a0a; }
+
+        /* ── RECORD ── */
+        .record-btn { width: 96px; height: 96px; border-radius: 50%; border: 4px solid rgba(255,255,255,.2); background: var(--danger); color: white; font-size: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; transition: all .2s; box-shadow: 0 8px 32px rgba(239,68,68,.35); }
+        .record-btn:hover { transform: scale(1.05); }
+        .record-btn.pulsing { background: #991b1b; animation: prec 1.5s infinite; }
+        @keyframes prec { 0%,100%{box-shadow:0 8px 32px rgba(239,68,68,.3)} 50%{box-shadow:0 8px 56px rgba(239,68,68,.7)} }
+        .waveform { display: flex; align-items: center; justify-content: center; gap: 3px; height: 48px; }
+        .wb { width: 4px; background: #0a0a0a; border-radius: 3px; animation: wv .8s ease-in-out infinite; }
+        @keyframes wv { 0%,100%{height:5px;opacity:.3} 50%{height:36px;opacity:1} }
+        .timer { font-size: 40px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: 3px; }
+        .rec-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); animation: blink 1s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.1} }
+        .live-box { background: #fafafa; border: 1.5px solid var(--border); border-radius: 10px; padding: 14px 16px; min-height: 72px; font-size: 13px; line-height: 1.75; }
+        .live-interim { color: #a3a3a3; font-style: italic; }
+
+        /* ── SPINNER ── */
+        .spinner { width: 48px; height: 48px; border: 4px solid #e5e5e5; border-top-color: #0a0a0a; border-radius: 50%; animation: spin .75s linear infinite; margin: 0 auto 18px; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* ══════════════════════════════════════════
+           TRIAGE CARDS
+        ══════════════════════════════════════════ */
+        .triage-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .triage-counter { font-size: 13px; color: var(--muted); font-weight: 400; }
+        .triage-counter strong { color: var(--text); }
+
+        .triage-filters { display: flex; gap: 6px; }
+        .tf { padding: 4px 14px; border-radius: 99px; border: 1.5px solid var(--border); background: white; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; font-family: inherit; }
+        .tf.active { background: #0a0a0a; border-color: #0a0a0a; color: white; }
+
+        .triage-card {
+            display: flex; align-items: stretch; gap: 0;
+            background: white; border: 1.5px solid var(--border);
+            border-radius: 12px; margin-bottom: 10px;
+            overflow: hidden; transition: all .2s;
+        }
+        .triage-card.approved { border-color: #86efac; background: #f0fdf4; }
+        .triage-card.rejected { border-color: #fca5a5; background: #fff5f5; opacity: .55; }
+        .triage-card.hidden   { display: none; }
+
+        .tc-stripe { width: 5px; flex-shrink: 0; background: var(--border); transition: background .2s; }
+        .triage-card.approved .tc-stripe { background: var(--success); }
+        .triage-card.rejected .tc-stripe { background: var(--danger); }
+
+        .tc-body { flex: 1; padding: 14px 16px; min-width: 0; }
+
+        .tc-task {
+            font-size: 14px; font-weight: 400; line-height: 1.5;
+            color: var(--text); margin-bottom: 10px;
+            border: none; outline: none; width: 100%;
+            background: transparent; font-family: inherit; resize: none; padding: 0;
+        }
+        .triage-card.rejected .tc-task { text-decoration: line-through; color: var(--muted); }
+
+        .tc-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        /* Owner pill selector */
+        .owner-sel { padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 500; background: white; cursor: pointer; outline: none; font-family: inherit; color: var(--text); }
+        .owner-sel:focus { border-color: #0a0a0a; }
+
+        /* Priority pills */
+        .prio-group { display: flex; gap: 4px; }
+        .pp { padding: 4px 10px; border-radius: 99px; border: 1.5px solid var(--border); background: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); font-family: inherit; }
+        .pp:hover { border-color: currentColor; }
+        .pp-h.sel { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        .pp-m.sel { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+        .pp-l.sel { background: #dcfce7; color: #166534; border-color: #86efac; }
+
+        /* Due hint */
+        .due-hint { font-size: 11px; color: var(--muted); background: #f5f5f5; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--border); }
+        .due-hint.urgent { color: #991b1b; background: #fee2e2; border-color: #fca5a5; }
+
+        /* Approve / Reject buttons on the card */
+        .tc-actions { display: flex; flex-direction: column; gap: 0; border-left: 1px solid var(--border); flex-shrink: 0; }
+        .tc-btn { flex: 1; width: 52px; border: none; cursor: pointer; font-size: 18px; font-weight: 700; background: white; transition: all .15s; display: flex; align-items: center; justify-content: center; }
+        .tc-btn-approve { color: var(--success); border-bottom: 1px solid var(--border); }
+        .tc-btn-approve:hover { background: #f0fdf4; }
+        .tc-btn-reject  { color: var(--danger); }
+        .tc-btn-reject:hover  { background: #fff5f5; }
+        .triage-card.approved .tc-btn-approve { background: #dcfce7; }
+        .triage-card.rejected .tc-btn-reject  { background: #fee2e2; }
+
+        /* Triage summary bar */
+        .triage-summary { display: flex; gap: 12px; padding: 14px 18px; background: white; border: 1.5px solid var(--border); border-radius: 12px; margin-bottom: 16px; }
+        .ts-item { text-align: center; flex: 1; }
+        .ts-num  { font-size: 24px; font-weight: 900; }
+        .ts-lbl  { font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+        .ts-approved { color: var(--success); }
+        .ts-pending  { color: #0a0a0a; }
+        .ts-rejected { color: var(--danger); }
+
+        /* Action items (dashboard / detail) */
+        .action-item { display: flex; align-items: flex-start; gap: 12px; padding: 13px 14px; background: #fafafa; border: 1px solid var(--border); border-radius: 9px; margin-bottom: 8px; }
+        .action-item.done { opacity: .55; }
+        .action-checkbox { width: 17px; height: 17px; cursor: pointer; accent-color: #0a0a0a; flex-shrink: 0; margin-top: 2px; }
+        .action-task { font-size: 14px; line-height: 1.5; flex: 1; font-weight: 400; }
+        .action-meta { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+        /* ── MODALS ── */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 32px 24px; overflow-y: auto; }
+        .modal { background: white; border-radius: 16px; padding: 32px; width: 680px; max-width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,.14); }
+        .modal-sm { width: 500px; }
+
+        /* ── VIEWS ── */
+        .view { display: none; } .view.active { display: block; }
+
+        /* ── TOASTS ── */
+        .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: #0a0a0a; color: white; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 400; box-shadow: 0 8px 24px rgba(0,0,0,.2); animation: tin .25s ease; }
+        @keyframes tin { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+        /* ── MISC ── */
+        .empty { text-align: center; padding: 64px 20px; }
+        .empty-icon { font-size: 52px; margin-bottom: 16px; }
+        .empty-h { font-size: 18px; font-weight: 900; margin-bottom: 8px; letter-spacing: -.3px; }
+        .empty-p { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 300px; margin: 0 auto 24px; font-weight: 300; }
+        .sh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .st { font-size: 16px; font-weight: 900; letter-spacing: -.2px; }
+        .summary-box { background: #fafafa; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; font-size: 14px; line-height: 1.7; color: #0a0a0a; font-weight: 300; }
+        .tx-box { background: #fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-size: 13px; line-height: 1.75; max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-weight: 300; }
+        .topics { display: flex; flex-wrap: wrap; gap: 8px; }
+        .topic { background: #f5f5f5; color: #404040; font-size: 12px; font-weight: 500; padding: 4px 13px; border-radius: 99px; }
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+        .fb { padding: 6px 16px; border-radius: 99px; border: 1.5px solid var(--border); background: white; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; font-family: inherit; }
+        .fb.active { background: #0a0a0a; border-color: #0a0a0a; color: white; }
+        .info { background: #fafafa; border: 1px solid var(--border); border-radius: 9px; padding: 12px 16px; font-size: 13px; color: #404040; display: flex; gap: 8px; margin-bottom: 16px; line-height: 1.6; font-weight: 300; }
+        .hint { background: #fafafa; border: 1px solid var(--border); border-radius: 9px; padding: 12px 16px; font-size: 13px; color: #404040; display: flex; gap: 8px; margin-bottom: 20px; line-height: 1.6; font-weight: 300; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 4px; }
+
+        /* Save bar */
+        .save-bar { position: sticky; bottom: 0; background: white; border-top: 1px solid var(--border); padding: 16px 0 0; margin-top: 24px; display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-text">🎙️ NextStep</div>
+        <div class="logo-sub">Sales Call Intelligence</div>
+    </div>
+    <nav class="nav-section">
+        <div class="nav-label">Navigation</div>
+        <button class="nav-item active" id="nav-dashboard" onclick="go('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
+        <button class="nav-item" id="nav-new-call" onclick="go('new-call')"><span class="nav-icon">🎙️</span>New Call</button>
+        <button class="nav-item" id="nav-tasks" onclick="go('tasks')"><span class="nav-icon">✅</span>All Tasks<span class="nav-badge" id="task-badge">0</span></button>
+    </nav>
+    <div class="sidebar-footer">
+        <button class="nav-item" onclick="showTips()"><span class="nav-icon">💡</span>Tips</button>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+    <header class="topbar">
+        <div class="page-title" id="page-title">Dashboard</div>
+        <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">➕ Add Task</button>
+            <button class="btn btn-primary btn-sm" onclick="go('new-call')">+ New Call</button>
+        </div>
+    </header>
+    <div class="content">
+        <div class="view active" id="view-dashboard"><div class="stats-grid" id="stats-grid"></div><div class="sh"><h2 class="st">Recent Calls</h2></div><div id="calls-list"></div></div>
+        <div class="view" id="view-new-call"><div id="nc"></div></div>
+        <div class="view" id="view-tasks">
+            <!-- Header row with filters + add button -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+                <div class="filter-bar" style="margin-bottom:0;flex-wrap:wrap">
+                    <button class="fb active" id="f-all"       onclick="filterTasks('all')">All</button>
+                    <button class="fb"        id="f-pending"   onclick="filterTasks('pending')">⏳ Pending</button>
+                    <button class="fb"        id="f-completed" onclick="filterTasks('completed')">✅ Done</button>
+                    <button class="fb"        id="f-high"      onclick="filterTasks('high')">🔴 High Priority</button>
+                    <button class="fb"        id="f-mine"      onclick="filterTasks('mine')">👤 My Tasks</button>
+                    <button class="fb"        id="f-customer"  onclick="filterTasks('customer')">🤝 Customer</button>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openAddTaskModal()">+ Add Task</button>
+            </div>
+
+            <div id="tasks-list"></div>
+        </div>
+    </div>
+</main>
+
+<!-- CALL DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal" style="display:none" onclick="if(event.target===this)closeDetail()">
+    <div class="modal"><div id="detail-content"></div></div>
+</div>
+
+<!-- TIPS MODAL -->
+<div class="modal-overlay" id="tips-modal" style="display:none" onclick="if(event.target===this)closeTips()">
+    <div class="modal modal-sm">
+        <div style="font-size:20px;font-weight:800;margin-bottom:16px">💡 Getting the best results</div>
+        <div style="font-size:14px;line-height:1.9">
+            <p style="margin-bottom:10px"><strong>Speak in full sentences</strong> — "I will send the contract by Friday" is detected as an action; "contract Friday" is not.</p>
+            <p style="margin-bottom:10px"><strong>State commitments clearly</strong> — phrases like "I'll follow up", "can you send me", "we agreed to" all trigger action detection.</p>
+            <p style="margin-bottom:10px"><strong>Mention urgency</strong> — words like "urgent", "ASAP", "by tomorrow" automatically flag items as High priority.</p>
+            <p style="margin-bottom:10px"><strong>After recording, review in the triage screen</strong> — approve what matters, reject what doesn't with one click.</p>
+            <p style="margin-bottom:10px"><strong>No transcript?</strong> Just type bullet-point notes in the box — even rough notes are enough for action detection.</p>
+        </div>
+        <div style="text-align:right;margin-top:20px"><button class="btn btn-primary" onclick="closeTips()">Got it</button></div>
+    </div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="add-task-modal" style="display:none" onclick="if(event.target===this)closeAddTaskModal()">
+    <div class="modal modal-sm">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <div style="font-size:18px;font-weight:800">➕ New Task</div>
+            <button class="btn-ghost" onclick="closeAddTaskModal()">✕</button>
+        </div>
+        <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Task *</label>
+            <input type="text" class="form-input" id="atm-task" placeholder="e.g. Send updated proposal to client">
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Priority</label>
+                <div class="prio-group">
+                    <button class="pp pp-h" id="atm-h" onclick="setATMPrio('high')">🔴 High</button>
+                    <button class="pp pp-m sel" id="atm-m" onclick="setATMPrio('medium')">🟡 Med</button>
+                    <button class="pp pp-l" id="atm-l" onclick="setATMPrio('low')">🟢 Low</button>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Owner</label>
+                <select class="owner-sel" id="atm-owner">
+                    <option value="Sales Rep">👤 Sales Rep</option>
+                    <option value="Customer">🤝 Customer</option>
+                    <option value="Both">👥 Both</option>
+                    <option value="TBD">❓ TBD</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Due Date</label>
+                <input type="date" class="form-input" id="atm-due" style="width:150px;font-size:13px">
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Notes <span style="font-style:italic;font-weight:400">(optional)</span></label>
+            <textarea class="big-tx" id="atm-notes" rows="3" placeholder="Any context, links or reminders to attach to this task..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-outline btn-sm" onclick="closeAddTaskModal()">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveAddTaskModal()">Save Task</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT TASK MODAL -->
+<div class="modal-overlay" id="edit-task-modal" style="display:none" onclick="if(event.target===this)closeEditTask()">
+    <div class="modal modal-sm">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <div style="font-size:18px;font-weight:800">✏️ Edit Task</div>
+            <button class="btn-ghost" onclick="closeEditTask()">✕</button>
+        </div>
+        <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Task *</label>
+            <textarea class="big-tx" id="etm-task" rows="3"></textarea>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Priority</label>
+                <div class="prio-group">
+                    <button class="pp pp-h" id="etm-h" onclick="setETMPrio('high')">🔴 High</button>
+                    <button class="pp pp-m" id="etm-m" onclick="setETMPrio('medium')">🟡 Med</button>
+                    <button class="pp pp-l" id="etm-l" onclick="setETMPrio('low')">🟢 Low</button>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Owner</label>
+                <select class="owner-sel" id="etm-owner">
+                    <option value="Sales Rep">👤 Sales Rep</option>
+                    <option value="Customer">🤝 Customer</option>
+                    <option value="Both">👥 Both</option>
+                    <option value="TBD">❓ TBD</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Due Date</label>
+                <input type="date" class="form-input" id="etm-due" style="width:150px;font-size:13px">
+            </div>
+        </div>
+        <div style="margin-bottom:20px">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Notes</label>
+            <textarea class="big-tx" id="etm-notes" rows="3" placeholder="Add context, follow-up links or reminders..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-outline btn-sm" onclick="closeEditTask()">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveEditTask()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+const S = {
+    calls: [], manualTasks: [], sub: 'idle',
+    rec: null, recorder: null, stream: null, speechRec: null,
+    chunks: [], blob: null, liveText: '', duration: 0, timer: null,
+    taskFilter: 'all', triageFilter: 'all',
+};
+
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const pad  = n  => String(n).padStart(2,'0');
+const fmt  = s  => `${pad(Math.floor(s/60))}:${pad(s%60)}`;
+const ini  = n  => (n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const fmtD = ts => new Date(ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const cap  = s  => s ? s.charAt(0).toUpperCase()+s.slice(1) : '';
+const esc  = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function toast(msg, ms=3000) {
+    const w=document.getElementById('toasts'), el=document.createElement('div');
+    el.className='toast'; el.textContent=msg; w.appendChild(el);
+    setTimeout(()=>el.remove(), ms);
+}
+
+function pendingN() {
+    const fromCalls = S.calls.reduce((a,c) => a + c.actionItems.filter(t=>!t.done).length, 0);
+    const fromManual = S.manualTasks.filter(t=>!t.done).length;
+    return fromCalls + fromManual;
+}
+function badge() {
+    const n=pendingN(), el=document.getElementById('task-badge');
+    el.textContent=n; el.style.display=n>0?'inline-block':'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════
+function go(v) {
+    document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+    document.getElementById(`view-${v}`).classList.add('active');
+    const nb=document.getElementById(`nav-${v}`); if(nb) nb.classList.add('active');
+    ({'dashboard':renderDash,'new-call':renderNC,'tasks':renderTasks}[v]||renderDash)();
+    document.getElementById('page-title').textContent=({'dashboard':'Dashboard','new-call':'New Call','tasks':'All Tasks'}[v]||'');
+}
+function showTips()  { document.getElementById('tips-modal').style.display='flex'; }
+function closeTips() { document.getElementById('tips-modal').style.display='none'; }
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+function renderDash() {
+    const t=S.calls.length, p=pendingN();
+    const done=S.calls.reduce((a,c)=>a+c.actionItems.filter(x=>x.done).length,0);
+    const week=S.calls.filter(c=>c.date>Date.now()-7*864e5).length;
+    document.getElementById('stats-grid').innerHTML=[
+        {i:'📞',v:t,l:'Total Calls'},{i:'📋',v:p,l:'Open Tasks'},{i:'✅',v:done,l:'Completed'},{i:'📅',v:week,l:'This Week'}
+    ].map(s=>`<div class="stat-card"><div class="stat-icon">${s.i}</div><div class="stat-val">${s.v}</div><div class="stat-lbl">${s.l}</div></div>`).join('');
+
+    document.getElementById('calls-list').innerHTML = !t
+        ? `<div class="empty"><div class="empty-icon">📞</div><div class="empty-h">No calls yet</div><div class="empty-p">Record your first sales call to get AI-powered summaries and action items.</div><button class="btn btn-primary" onclick="go('new-call')">+ Record First Call</button></div>`
+        : S.calls.slice().reverse().map(c=>`
+            <div class="call-card" onclick="openDetail('${c.id}')">
+                <div class="avatar">${ini(c.contactName)}</div>
+                <div class="call-info">
+                    <div class="call-head"><div class="call-name">${esc(c.contactName)}</div><div class="call-date">${fmtD(c.date)}${c.duration?' · '+fmt(c.duration):''}</div></div>
+                    <div class="call-snip">${esc(c.summary)}</div>
+                    <div class="call-foot">
+                        <span class="badge badge-tasks">📋 ${c.actionItems.length} task${c.actionItems.length!==1?'s':''}</span>
+                        ${c.keyTopics.slice(0,3).map(t=>`<span class="badge badge-topic">${esc(t)}</span>`).join('')}
+                        ${c.sentiment==='positive'?'<span class="badge badge-pos">😊 Positive</span>':c.sentiment==='negative'?'<span class="badge badge-neg">😟 Negative</span>':''}
+                    </div>
+                </div>
+            </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// CALL DETAIL
+// ══════════════════════════════════════════════════════════
+function openDetail(id) {
+    const c=S.calls.find(x=>x.id===id); if(!c) return;
+    const grouped = { 'Sales Rep':[], 'Customer':[], 'Both':[], 'TBD':[] };
+    c.actionItems.forEach(t => (grouped[t.owner]||grouped['TBD']).push(t));
+
+    document.getElementById('detail-content').innerHTML=`
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+            <div class="avatar" style="width:52px;height:52px;font-size:18px">${ini(c.contactName)}</div>
+            <div><div style="font-size:20px;font-weight:800">${esc(c.contactName)}</div><div style="color:var(--muted);font-size:13px">${fmtD(c.date)}${c.duration?' · '+fmt(c.duration):''}</div></div>
+            <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="closeDetail()">✕</button>
+        </div>
+        <div style="margin-bottom:20px"><div class="st" style="margin-bottom:10px">📝 Summary</div><div class="summary-box">${esc(c.summary)}</div></div>
+        ${c.keyTopics.length?`<div style="margin-bottom:20px"><div class="st" style="margin-bottom:10px">🏷️ Key Topics</div><div class="topics">${c.keyTopics.map(t=>`<span class="topic">${esc(t)}</span>`).join('')}</div></div>`:''}
+        ${c.nextSteps?`<div style="margin-bottom:20px"><div class="st" style="margin-bottom:10px">🚀 Next Steps</div><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:14px;font-size:14px;line-height:1.6;color:#065f46">${esc(c.nextSteps)}</div></div>`:''}
+        <div>
+            <div class="st" style="margin-bottom:14px">✅ Action Items (${c.actionItems.length})</div>
+            ${Object.entries(grouped).filter(([,v])=>v.length).map(([owner,items])=>`
+                <div style="margin-bottom:16px">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">${ownerIcon(owner)} ${owner}</div>
+                    ${items.map(item=>`
+                        <div class="action-item ${item.done?'done':''}" id="di-${item.id}">
+                            <input type="checkbox" class="action-checkbox" ${item.done?'checked':''} onchange="toggleTask('${c.id}','${item.id}',this.checked)">
+                            <div style="flex:1">
+                                <div class="action-task" style="${item.done?'text-decoration:line-through':''}">${esc(item.task)}</div>
+                                <div class="action-meta">
+                                    <span class="badge badge-${item.priority}" style="font-size:11px">${item.priority}</span>
+                                    ${item.dueHint?`<span>📅 ${esc(item.dueHint)}</span>`:''}
+                                </div>
+                            </div>
+                        </div>`).join('')}
+                </div>`).join('')}
+        </div>
+        ${c.transcript?`<div style="margin-top:16px"><button class="btn-ghost" onclick="toggleEl('tx-det')">📄 Show / Hide Transcript</button><div id="tx-det" style="display:none;margin-top:10px"><div class="tx-box">${esc(c.transcript)}</div></div></div>`:''}`;
+    document.getElementById('detail-modal').style.display='flex';
+}
+function closeDetail() { document.getElementById('detail-modal').style.display='none'; }
+function toggleEl(id)  { const el=document.getElementById(id); if(el) el.style.display=el.style.display==='none'?'block':'none'; }
+function ownerIcon(o)  { return {Sales_Rep:'👤','Sales Rep':'👤','Customer':'🤝','Both':'👥','TBD':'❓'}[o]||'❓'; }
+
+function toggleTask(callId, taskId, checked) {
+    const c=S.calls.find(x=>x.id===callId); if(!c) return;
+    const t=c.actionItems.find(x=>x.id===taskId); if(!t) return;
+    t.done=checked; badge();
+    if(document.getElementById('view-tasks').classList.contains('active')) renderTasks();
+    const row=document.getElementById(`di-${taskId}`);
+    if(row){ row.classList.toggle('done',checked); const te=row.querySelector('.action-task'); if(te) te.style.textDecoration=checked?'line-through':'none'; }
+}
+
+// ══════════════════════════════════════════════════════════
+// NEW CALL SCREENS
+// ══════════════════════════════════════════════════════════
+function renderNC() {
+    const fns={idle:ncIdle,recording:ncRecording,annotate:ncAnnotate,processing:ncProcessing,review:ncReview};
+    (fns[S.sub]||ncIdle)(document.getElementById('nc'));
+}
+
+function stepBar(active) {
+    const steps=[{k:'idle',l:'Start'},{k:'annotate',l:'Add Notes'},{k:'review',l:'Triage & Save'}];
+    const order=['idle','annotate','review']; const ai=order.indexOf(active);
+    return `<div class="steps">${steps.map((s,i)=>{
+        const si=order.indexOf(s.k), cls=si<ai?'done':si===ai?'active':'idle', icon=si<ai?'✓':(i+1);
+        return `<div class="step ${cls}"><div class="step-dot">${icon}</div><span class="step-label">${s.l}</span></div>${i<steps.length-1?`<div class="step-line ${si<ai?'done':''}"></div>`:''}`;
+    }).join('')}</div>`;
+}
+
+/* IDLE */
+function ncIdle(c) {
+    c.innerHTML=`
+        <div style="max-width:640px;margin:0 auto">
+            ${stepBar('idle')}
+            <div class="card" style="margin-bottom:20px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Contact Name</label>
+                <input type="text" class="form-input" id="contact-input" placeholder="e.g. Sarah Jones — Acme Corp" value="${esc(S.rec?.contactName||'')}">
+            </div>
+            <div class="card">
+                <div class="tab-list">
+                    <button class="tab-btn active" onclick="switchTab('t-record',this)">🎙️ Record a Call</button>
+                    <button class="tab-btn"        onclick="switchTab('t-paste',this)">📋 Paste Notes / Transcript</button>
+                </div>
+                <div id="t-record">
+                    <div style="text-align:center;padding:32px 16px">
+                        <p style="color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:28px">
+                            Put your call on <strong>speakerphone</strong>, then press record.<br>
+                            After the call you can review and add any notes the mic missed.
+                        </p>
+                        <button class="record-btn" onclick="startRec()">🎙️</button>
+                        <div style="margin-top:16px;font-size:13px;color:var(--muted)">Press to start recording</div>
+                    </div>
+                </div>
+                <div id="t-paste" style="display:none">
+                    <div class="hint"><span>💡</span><span>Type or paste notes, bullet points, or a full transcript. Even rough notes work — NextStep will extract all the action items.</span></div>
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Notes / Transcript</label>
+                    <textarea class="big-tx" id="paste-text" rows="10" placeholder="e.g.&#10;• Discussed Q3 pricing — customer happy with the proposal&#10;• I will send the updated contract by end of this week&#10;• They need sign-off from their CFO before proceeding&#10;• Can you send me the spec document?&#10;• Follow-up call booked — next Tuesday 3pm"></textarea>
+                    <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="processPaste()">✨ Extract Action Items</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function switchTab(id,btn) {
+    ['t-record','t-paste'].forEach(t=>{const el=document.getElementById(t);if(el) el.style.display='none';});
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById(id).style.display='block'; btn.classList.add('active');
+}
+
+/* RECORDING */
+function ncRecording(c) {
+    const bars=Array.from({length:22},(_,i)=>`<div class="wb" style="animation-delay:${(i*.04).toFixed(2)}s"></div>`).join('');
+    c.innerHTML=`
+        <div style="max-width:640px;margin:0 auto">
+            ${stepBar('idle')}
+            <div class="card">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+                    <div style="display:flex;align-items:center;gap:8px;color:var(--danger);font-weight:700;font-size:14px">
+                        <span class="rec-dot"></span> RECORDING — ${esc(S.rec?.contactName||'Unknown')}
+                    </div>
+                    <div class="timer" id="rec-timer">00:00</div>
+                </div>
+                <div class="waveform" style="margin-bottom:20px">${bars}</div>
+                <div style="margin-bottom:20px">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Live Transcript</div>
+                    <div class="live-box"><span id="live-text"></span><span class="live-interim" id="live-interim">Listening… speak clearly near your microphone.</span></div>
+                </div>
+                <button class="btn btn-danger" style="width:100%;font-size:15px;padding:14px" onclick="stopRec()">⏹️ Stop Recording</button>
+            </div>
+        </div>`;
+    let s=0;
+    S.timer=setInterval(()=>{ s++; S.duration=s; const el=document.getElementById('rec-timer'); if(el) el.textContent=fmt(s); },1000);
+}
+
+/* ANNOTATE */
+function ncAnnotate(c) {
+    const r=S.rec||{};
+    c.innerHTML=`
+        <div style="max-width:640px;margin:0 auto">
+            ${stepBar('annotate')}
+            <div class="info"><span>✏️</span><span><strong>Edit or add to the notes below</strong> — the more detail you include, the better the action items will be. Even bullet points work.</span></div>
+            <div class="card" style="margin-bottom:16px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Contact Name</label>
+                <input type="text" class="form-input" id="ann-contact" value="${esc(r.contactName||'')}">
+            </div>
+            ${S.blob?`<div class="card" style="margin-bottom:16px"><div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--muted)">🎵 Recording — ${fmt(S.duration)}</div><audio controls style="width:100%;border-radius:8px" src="${URL.createObjectURL(S.blob)}"></audio></div>`:''}
+            <div class="card" style="margin-bottom:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:8px">📝 Notes / Transcript</div>
+                <textarea class="big-tx" id="ann-text" rows="12"
+                    placeholder="Type your call notes here:&#10;&#10;• I will send the contract by Friday&#10;• Customer needs sign-off from their board&#10;• Can you send me the pricing breakdown?&#10;• Next call: Tuesday 3pm&#10;• Urgently need their technical requirements">${esc(r.liveText||'')}</textarea>
+            </div>
+            <div style="display:flex;gap:12px;justify-content:flex-end">
+                <button class="btn btn-outline" onclick="discardAll()">🗑️ Discard</button>
+                <button class="btn btn-primary" onclick="processAnnotate()">✨ Extract Action Items →</button>
+            </div>
+        </div>`;
+}
+
+/* PROCESSING */
+function ncProcessing(c) {
+    c.innerHTML=`<div style="max-width:480px;margin:0 auto"><div class="card"><div style="text-align:center;padding:52px 24px"><div class="spinner"></div><div style="font-size:20px;font-weight:800;margin-bottom:10px">🧠 Analysing...</div><div style="color:var(--muted);font-size:14px;line-height:1.6">Detecting action items, priorities and owners from your notes...</div></div></div></div>`;
+}
+
+/* REVIEW — TRIAGE UI */
+function ncReview(c) {
+    const r=S.rec;
+    const items=r.actionItems||[];
+    const approved=items.filter(x=>x.status==='approved').length;
+    const rejected=items.filter(x=>x.status==='rejected').length;
+    const pending =items.filter(x=>x.status==='pending').length;
+
+    c.innerHTML=`
+        <div style="max-width:700px;margin:0 auto">
+            ${stepBar('review')}
+
+            <!-- Summary & topics -->
+            <div class="card" style="margin-bottom:16px">
+                <div class="sh" style="margin-bottom:10px">
+                    <div class="st">📝 Summary</div>
+                    <button class="btn-ghost btn-sm" onclick="toggleEl('tx-panel')">Show Notes</button>
+                </div>
+                <div id="tx-panel" style="display:none;margin-bottom:12px"><div class="tx-box">${esc(r.transcript||'')}</div></div>
+                <div class="summary-box">${esc(r.summary)}</div>
+                ${r.keyTopics&&r.keyTopics.length?`<div class="topics" style="margin-top:12px">${r.keyTopics.map(t=>`<span class="topic">${esc(t)}</span>`).join('')}</div>`:''}
+            </div>
+
+            <!-- TRIAGE SECTION -->
+            <div class="card" style="margin-bottom:0;padding-bottom:8px">
+                <div class="triage-header">
+                    <div>
+                        <div class="st" style="margin-bottom:4px">✅ Action Items — Triage</div>
+                        <div class="triage-counter" id="triage-counter">
+                            <strong class="ts-approved">${approved} approved</strong> &nbsp;·&nbsp;
+                            <strong class="ts-pending">${pending} pending</strong> &nbsp;·&nbsp;
+                            <strong class="ts-rejected">${rejected} dismissed</strong>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn btn-outline btn-sm" onclick="addNewTask()">+ Add</button>
+                        <button class="btn btn-success btn-sm" onclick="approveAll()">✓ Approve All</button>
+                    </div>
+                </div>
+
+                <!-- Filter tabs -->
+                <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+                    <button class="tf active" id="tf-all"      onclick="triageFilter('all')">All (${items.length})</button>
+                    <button class="tf"        id="tf-pending"  onclick="triageFilter('pending')">Pending (${pending})</button>
+                    <button class="tf"        id="tf-approved" onclick="triageFilter('approved')">✓ Approved (${approved})</button>
+                    <button class="tf"        id="tf-rejected" onclick="triageFilter('rejected')">✗ Dismissed (${rejected})</button>
+                </div>
+
+                <!-- Cards -->
+                <div id="triage-cards">
+                    ${items.length ? items.map(item=>triageCardHTML(item)).join('') : `<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px">No action items detected. Click "+ Add" to add one manually, or go back and add more detail to your notes.</div>`}
+                </div>
+
+                <!-- Add task inline -->
+                <div id="add-task-form" style="display:none;margin-top:8px">
+                    <div style="display:flex;gap:8px">
+                        <input class="form-input" id="new-task-input" placeholder="Describe the action item..." style="flex:1">
+                        <button class="btn btn-success btn-sm" onclick="confirmAddTask()">+ Add</button>
+                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('add-task-form').style.display='none'">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="save-bar">
+                <button class="btn btn-outline" onclick="discardAll()">🗑️ Discard</button>
+                <button class="btn btn-primary" style="padding:12px 28px" onclick="saveCall()" id="save-btn">💾 Save Call</button>
+            </div>
+        </div>`;
+
+    updateSaveBtn();
+    applyTriageFilter(S.triageFilter || 'all');
+}
+
+function triageCardHTML(item) {
+    const st=item.status||'pending';
+    return `<div class="triage-card ${st}" id="tc-${item.id}">
+        <div class="tc-stripe"></div>
+        <div class="tc-body">
+            <textarea class="tc-task" rows="2" oninput="updateTaskText('${item.id}',this.value)">${esc(item.task)}</textarea>
+            <div class="tc-meta">
+                <select class="owner-sel" onchange="updateOwner('${item.id}',this.value)">
+                    ${['Sales Rep','Customer','Both','TBD'].map(o=>`<option value="${o}" ${item.owner===o?'selected':''}>${ownerIcon(o)} ${o}</option>`).join('')}
+                </select>
+                <div class="prio-group">
+                    <button class="pp pp-h ${item.priority==='high'  ?'sel':''}" onclick="setPrio('${item.id}','high')"   title="High priority">🔴 High</button>
+                    <button class="pp pp-m ${item.priority==='medium'?'sel':''}" onclick="setPrio('${item.id}','medium')" title="Medium priority">🟡 Med</button>
+                    <button class="pp pp-l ${item.priority==='low'   ?'sel':''}" onclick="setPrio('${item.id}','low')"    title="Low priority">🟢 Low</button>
+                </div>
+                ${item.dueHint?`<span class="due-hint ${isUrgent(item.dueHint)?'urgent':''}">📅 ${esc(item.dueHint)}</span>`:''}
+            </div>
+        </div>
+        <div class="tc-actions">
+            <button class="tc-btn tc-btn-approve" onclick="triageApprove('${item.id}')" title="Approve — keep this action item">✓</button>
+            <button class="tc-btn tc-btn-reject"  onclick="triageReject('${item.id}')"  title="Dismiss — remove this item">✕</button>
+        </div>
+    </div>`;
+}
+
+function isUrgent(hint, dueDate) {
+    if (dueDate) {
+        const d = new Date(dueDate + 'T00:00:00');
+        const now = new Date(); now.setHours(0,0,0,0);
+        const diff = Math.round((d - now) / 86400000);
+        return diff <= 1; // today, tomorrow, or overdue
+    }
+    return /today|tomorrow|ASAP|urgent|overdue/i.test(hint);
+}
+
+/* Triage actions */
+function triageApprove(id) {
+    const item=findItem(id); if(!item) return;
+    item.status = item.status==='approved' ? 'pending' : 'approved';
+    refreshTriageCard(id, item);
+    updateTriageCounter(); updateSaveBtn();
+}
+function triageReject(id) {
+    const item=findItem(id); if(!item) return;
+    item.status = item.status==='rejected' ? 'pending' : 'rejected';
+    refreshTriageCard(id, item);
+    updateTriageCounter(); updateSaveBtn();
+}
+function approveAll() {
+    (S.rec?.actionItems||[]).forEach(item=>{ if(item.status!=='rejected') item.status='approved'; });
+    ncReview(document.getElementById('nc'));
+}
+function setPrio(id, p) {
+    const item=findItem(id); if(!item) return;
+    item.priority=p;
+    const card=document.getElementById(`tc-${id}`); if(!card) return;
+    card.querySelectorAll('.pp').forEach(btn=>btn.classList.remove('sel'));
+    card.querySelector(`.pp-${p[0]}`).classList.add('sel');
+}
+function updateOwner(id, val) { const item=findItem(id); if(item) item.owner=val; }
+function updateTaskText(id, val) { const item=findItem(id); if(item) item.task=val; }
+function findItem(id) { return (S.rec?.actionItems||[]).find(x=>x.id===id); }
+
+function refreshTriageCard(id, item) {
+    const card=document.getElementById(`tc-${id}`); if(!card) return;
+    card.className=`triage-card ${item.status}`;
+    applyTriageFilter(S.triageFilter||'all');
+}
+
+function triageFilter(f) {
+    S.triageFilter=f;
+    document.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+    document.getElementById(`tf-${f}`)?.classList.add('active');
+    applyTriageFilter(f);
+}
+function applyTriageFilter(f) {
+    document.querySelectorAll('.triage-card').forEach(card=>{
+        const id=card.id.replace('tc-','');
+        const item=findItem(id); if(!item) return;
+        card.classList.toggle('hidden', f!=='all' && item.status!==f);
+    });
+}
+
+function updateTriageCounter() {
+    const items=S.rec?.actionItems||[];
+    const a=items.filter(x=>x.status==='approved').length;
+    const r=items.filter(x=>x.status==='rejected').length;
+    const p=items.filter(x=>x.status==='pending').length;
+    const el=document.getElementById('triage-counter');
+    if(el) el.innerHTML=`<strong class="ts-approved">${a} approved</strong> &nbsp;·&nbsp; <strong class="ts-pending">${p} pending</strong> &nbsp;·&nbsp; <strong class="ts-rejected">${r} dismissed</strong>`;
+    // Update filter labels
+    ['all','pending','approved','rejected'].forEach(f=>{
+        const btn=document.getElementById(`tf-${f}`);
+        if(!btn) return;
+        const cnt=f==='all'?items.length:items.filter(x=>x.status===f).length;
+        btn.textContent=(f==='approved'?'✓ Approved':f==='rejected'?'✗ Dismissed':f.charAt(0).toUpperCase()+f.slice(1))+` (${cnt})`;
+    });
+}
+
+function updateSaveBtn() {
+    const items=S.rec?.actionItems||[];
+    const approved=items.filter(x=>x.status==='approved').length;
+    const btn=document.getElementById('save-btn');
+    if(btn) btn.textContent=`💾 Save Call${approved?` (${approved} action${approved!==1?'s':''})`:' (no actions)'}`;
+}
+
+function addNewTask() {
+    const form=document.getElementById('add-task-form');
+    if(form){ form.style.display='block'; document.getElementById('new-task-input')?.focus(); }
+}
+function confirmAddTask() {
+    const input=document.getElementById('new-task-input'); if(!input) return;
+    const task=input.value.trim(); if(!task) return;
+    const newItem={id:uid(),task:cap(task),owner:'Sales Rep',priority:'medium',dueHint:'',status:'approved',done:false};
+    if(!S.rec.actionItems) S.rec.actionItems=[];
+    S.rec.actionItems.push(newItem);
+    input.value='';
+    document.getElementById('add-task-form').style.display='none';
+    // Append new card
+    const cards=document.getElementById('triage-cards');
+    if(cards){ const noItems=cards.querySelector('div[style]'); if(noItems) cards.innerHTML=''; cards.insertAdjacentHTML('beforeend',triageCardHTML(newItem)); }
+    updateTriageCounter(); updateSaveBtn();
+    applyTriageFilter(S.triageFilter||'all');
+}
+
+// ══════════════════════════════════════════════════════════
+// RECORDING
+// ══════════════════════════════════════════════════════════
+async function startRec() {
+    const contactName=document.getElementById('contact-input')?.value.trim()||'Unknown Contact';
+    try {
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        S.stream=stream; S.chunks=[]; S.liveText=''; S.rec={contactName};
+        const mime=MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'audio/ogg';
+        S.recorder=new MediaRecorder(stream,{mimeType:mime});
+        S.recorder.ondataavailable=e=>{if(e.data.size>0) S.chunks.push(e.data);};
+        S.recorder.start(500);
+        const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+        if(SR){try{
+            S.speechRec=new SR(); S.speechRec.continuous=true; S.speechRec.interimResults=true; S.speechRec.lang='en-GB';
+            S.speechRec.onresult=e=>{let int='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)S.liveText+=e.results[i][0].transcript+' ';else int+=e.results[i][0].transcript;}const lt=document.getElementById('live-text'),li=document.getElementById('live-interim');if(lt)lt.textContent=S.liveText;if(li)li.textContent=int;};
+            S.speechRec.onerror=()=>{S.speechRec=null;};
+            S.speechRec.onend=()=>{if(S.sub==='recording'&&S.speechRec)try{S.speechRec.start();}catch(_){}};
+            S.speechRec.start();
+        }catch(_){S.speechRec=null;}}
+        S.sub='recording'; S.duration=0; renderNC();
+    } catch(err){ toast('❌ Microphone access denied — please allow permission when prompted.'); }
+}
+
+function stopRec() {
+    if(S.timer){clearInterval(S.timer);S.timer=null;}
+    if(S.speechRec){try{S.speechRec.stop();}catch(_){}S.speechRec=null;}
+    const finish=()=>{S.stream?.getTracks().forEach(t=>t.stop());S.rec={...S.rec,liveText:S.liveText.trim()};S.sub='annotate';renderNC();};
+    if(S.recorder&&S.recorder.state!=='inactive'){const mt=S.recorder.mimeType;S.recorder.onstop=()=>{S.blob=new Blob(S.chunks,{type:mt});finish();};S.recorder.stop();}
+    else finish();
+}
+
+function discardAll() {
+    if(S.timer){clearInterval(S.timer);S.timer=null;}
+    if(S.speechRec){try{S.speechRec.stop();}catch(_){}S.speechRec=null;}
+    if(S.recorder&&S.recorder.state!=='inactive')S.recorder.stop();
+    S.stream?.getTracks().forEach(t=>t.stop());
+    Object.assign(S,{sub:'idle',rec:null,blob:null,duration:0,liveText:''});
+    renderNC();
+}
+
+// ══════════════════════════════════════════════════════════
+// PROCESS TRIGGERS
+// ══════════════════════════════════════════════════════════
+function processAnnotate() {
+    const cn=document.getElementById('ann-contact')?.value.trim()||S.rec?.contactName||'Unknown';
+    const tx=document.getElementById('ann-text')?.value.trim()||'';
+    if(!tx){toast('⚠️ Please add some notes before continuing — even bullet points work great.');return;}
+    S.rec={...S.rec,contactName:cn,transcript:tx};
+    runAnalysis(cn,tx);
+}
+function processPaste() {
+    const cn=document.getElementById('contact-input')?.value.trim()||'Unknown Contact';
+    const tx=document.getElementById('paste-text')?.value.trim()||'';
+    if(!tx){toast('⚠️ Please add some notes or transcript text first.');return;}
+    S.rec={contactName:cn,transcript:tx};
+    runAnalysis(cn,tx);
+}
+function runAnalysis(cn,tx) {
+    S.sub='processing'; renderNC();
+    setTimeout(()=>{
+        const items=extractActions(tx);
+        S.rec={...S.rec,contactName:cn,transcript:tx,
+            summary:generateSummary(tx), actionItems:items,
+            keyTopics:extractTopics(tx), sentiment:detectSentiment(tx),
+            nextSteps:extractNextSteps(tx)};
+        S.triageFilter='all'; S.sub='review'; renderNC();
+    },350);
+}
+
+// ══════════════════════════════════════════════════════════
+// SMART NLP ENGINE
+// ══════════════════════════════════════════════════════════
+
+/* ── ACTION PATTERNS ── */
+const PATTERNS = [
+    // First-person commitments → Sales Rep
+    { re:/\b(I will|I'll|I'm going to|I plan to|I intend to|I need to|I should|I must|I can get|I can send|I can arrange|I can share|I'll make sure|I'll get that|I'll sort|I'll check|I'll book|I'll arrange|I'll call|I'll email|I'll follow up|I'll schedule|I'll prepare|I'll share|let me|allow me to|I'm going to)\b/i, owner:'Sales Rep' },
+    // Future tense action verbs (no subject) → Sales Rep
+    { re:/\b(will send|will call|will email|will book|will arrange|will confirm|will check|will review|will prepare|will schedule|will share|will submit|will complete|will follow|will reach|will contact|will get back|will update|will look into|will chase)\b/i, owner:'Sales Rep' },
+    // We commitments → Both
+    { re:/\b(we will|we'll|we're going to|we need to|we should|we must|we plan|we'll make sure|we can|our team will|we've agreed|we agreed|both agreed)\b/i, owner:'Both' },
+    // Requests to customer → Customer
+    { re:/\b(could you|can you|would you|if you could|if you can|please send|please confirm|please book|please provide|please share|please check|please let me know|please review|please sign|please approve|please complete|please fill|please submit|please get back|don't forget to|make sure you|you'll need to|you need to|you must|you should|you said you'd|you said you would)\b/i, owner:'Customer' },
+    // Customer future tense → Customer
+    { re:/\b(they will|they'll|they're going to|they need to|they should|the customer will|the client will|the customer needs|the client needs|they confirmed|they agreed|they're going)\b/i, owner:'Customer' },
+    // Agreements → Both
+    { re:/\b(agreed to|we agreed|confirmed that|we confirmed|both confirmed|it was agreed|action from|it was decided)\b/i, owner:'Both' },
+    // Explicit markers → TBD
+    { re:/\b(action:|action item:|to[\s-]?do:|follow[\s-]?up:|next step:|task:|note:|important:)\b/i, owner:'TBD' },
+    // Imperative verbs at sentence start → Sales Rep
+    { re:/^(send|email|call|book|schedule|arrange|confirm|check|review|prepare|share|provide|submit|complete|follow up|follow-up|get|obtain|update|create|draft|write|organise|organize|contact|reach out|speak|brief|notify|inform|chase|remind|circulate)\b/i, owner:'Sales Rep' },
+];
+
+/* ── PRIORITY SIGNALS ── */
+const PRIO_HIGH = /\b(urgent|urgently|ASAP|as soon as possible|critical|high priority|immediately|end of day|EOD|by today|by tomorrow|tonight|this afternoon|today|tomorrow|no later than|deadline)\b/i;
+const PRIO_LOW  = /\b(eventually|when you get a chance|no rush|low priority|if possible|at some point|when convenient|in due course|next month|when ready)\b/i;
+
+/* ── DUE DATE HINTS ── */
+const DUE_RULES = [
+    [/\b(today|end of day|EOD|by close of business|by COB)\b/i, 'Today'],
+    [/\b(tomorrow)\b/i, 'Tomorrow'],
+    [/\bby (this |end of (?:this )?)?week\b/i, 'This week'],
+    [/\bby (this |end of )?(?:this )?Friday\b/i, 'This Friday'],
+    [/\bnext (Monday|Tuesday|Wednesday|Thursday|Friday|week)\b/i, m=>`Next ${m[1]}`],
+    [/\bby end of (?:the |next )?month\b/i, 'End of month'],
+    [/\bin (\d+) (?:business |working )?days?\b/i, m=>`In ${m[1]} days`],
+    [/\bby the (\d{1,2})(?:st|nd|rd|th)?\b/i, m=>`By ${m[1]}th`],
+    [/\bASAP|urgent(?:ly)?\b/i, 'ASAP'],
+];
+
+function extractDueHint(s) {
+    for (const [re, hint] of DUE_RULES) {
+        const m=s.match(re); if(m) return typeof hint==='function'?hint(m):hint;
+    }
+    return '';
+}
+
+/* ── TASK CLEANING ── */
+const PREAMBLES = [
+    /^(I will|I'll|I'm going to|I plan to|I intend to|I need to|I should|I must|I can|let me|allow me to)\s+/i,
+    /^(We will|We'll|We're going to|We need to|We should|We plan to)\s+/i,
+    /^(Could you|Can you|Would you|Please|If you could)\s+/i,
+    /^(They will|They'll|They need to|They should)\s+/i,
+    /^(Action:|Action item:|To-do:|Follow-up:|Next step:|Task:|Note:|Important:)\s*/i,
+];
+function cleanTask(s) {
+    let t=s.trim();
+    for(const re of PREAMBLES) t=t.replace(re,'');
+    return cap(t.trim());
+}
+
+/* ── MAIN EXTRACTION ── */
+function extractActions(text) {
+    const results=[], seen=new Set();
+
+    // 1. Bullet / numbered list items
+    const bulletLines=(text.match(/^\s*(?:[-•*]|\d+[.)]\s)\s*(.+)/gm)||[]);
+    bulletLines.forEach(line=>{
+        const raw=line.replace(/^\s*(?:[-•*]|\d+[.)]\s)\s*/,'').trim();
+        if(raw.length<8||raw.length>280) return;
+        const key=raw.toLowerCase().slice(0,40); if(seen.has(key)) return; seen.add(key);
+        const pat=PATTERNS.find(p=>p.re.test(raw));
+        results.push({
+            id:uid(), task:cleanTask(raw)||cap(raw),
+            owner:pat?pat.owner:inferOwner(raw),
+            priority:PRIO_HIGH.test(raw)?'high':PRIO_LOW.test(raw)?'low':'medium',
+            dueHint:extractDueHint(raw),
+            status:'pending', done:false,
+        });
+    });
+
+    // 2. Sentence-based detection
+    const sents=splitSents(text);
+    sents.forEach(s=>{
+        const m=PATTERNS.find(p=>p.re.test(s));
+        if(!m) return;
+        if(s.length<10||s.length>300) return;
+        const key=s.toLowerCase().slice(0,40); if(seen.has(key)) return; seen.add(key);
+        results.push({
+            id:uid(), task:cleanTask(s)||cap(s.trim()),
+            owner:m.owner,
+            priority:PRIO_HIGH.test(s)?'high':PRIO_LOW.test(s)?'low':'medium',
+            dueHint:extractDueHint(s),
+            status:'pending', done:false,
+        });
+    });
+
+    // Sort: high first, then medium, then low
+    const po={high:0,medium:1,low:2};
+    results.sort((a,b)=>(po[a.priority]||1)-(po[b.priority]||1));
+    return results.slice(0,20);
+}
+
+function inferOwner(s) {
+    if(/\b(I will|I'll|I need|I should|I'm going|let me|I can)\b/i.test(s)) return 'Sales Rep';
+    if(/\b(you will|you'll|you need|you should|could you|can you|you must)\b/i.test(s)) return 'Customer';
+    if(/\b(they will|they'll|they need|the customer|the client)\b/i.test(s)) return 'Customer';
+    return 'TBD';
+}
+
+/* ── SUMMARY ── */
+function generateSummary(text) {
+    const sents=splitSents(text); if(!sents.length) return text.slice(0,300)+'…';
+    const KW='price cost budget deadline contract deal agree agreed follow next action discuss concern requirement timeline proposal decision confirm order meeting opportunity discount demo trial close sign send update issue committed objection'.split(' ');
+    const scored=sents.map((s,i)=>({s,score:(i===0?3:0)+(i===sents.length-1?2:0)+KW.reduce((a,k)=>a+(s.toLowerCase().includes(k)?1:0),0)}));
+    scored.sort((a,b)=>b.score-a.score);
+    const top=new Set(scored.slice(0,Math.min(3,sents.length)).map(x=>x.s));
+    return sents.filter(s=>top.has(s)).join(' ').replace(/\s+/g,' ').trim();
+}
+
+/* ── TOPICS ── */
+const STOP=new Set('the a an and or but in on at to for of with is are was were be been being have has had do does did will would could should may might can this that these those it its we i you he she they my your our their just so then than when if about from by as up what how not no yes ok yeah okay actually basically really very quite also well right like think know going said gonna wanna got get put see look come back into over out all some there here who which said just very'.split(' '));
+function extractTopics(text) {
+    const freq={};
+    (text.toLowerCase().match(/\b[a-z]{4,}\b/g)||[]).forEach(w=>{if(!STOP.has(w))freq[w]=(freq[w]||0)+1;});
+    return Object.entries(freq).filter(([,v])=>v>=2).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([w])=>cap(w));
+}
+
+/* ── SENTIMENT ── */
+const POS=/\b(great|excellent|perfect|happy|excited|love|brilliant|fantastic|wonderful|good|yes|agree|agreed|definitely|absolutely|forward|opportunity|confident|positive|success|deal|winning|close|pleased|delighted|interested|keen|impressed|helpful|clear|strong)\b/gi;
+const NEG=/\b(problem|issue|concern|difficult|challenging|disappointed|unhappy|frustrated|no|not|never|cancel|wrong|failed|fail|delay|delayed|risk|risky|worried|uncertain|expensive|costly|tight|objection|pushback|hesitant|unsure|complicated|unclear|blocked|stalled)\b/gi;
+function detectSentiment(text) {
+    const p=(text.match(POS)||[]).length, n=(text.match(NEG)||[]).length;
+    return p>n*1.5?'positive':n>p*1.5?'negative':'neutral';
+}
+
+/* ── NEXT STEPS ── */
+const NXT=/\b(next step|so the plan|what we'll do|going forward|to summarise|to wrap up|in summary|action from here|so from here|shall we|let's agree|agree to|let's go with|so we've agreed|to confirm|so to confirm|we've decided)\b/i;
+function extractNextSteps(text) {
+    const sents=splitSents(text), matches=sents.filter(s=>NXT.test(s));
+    return matches.length?matches.slice(0,2).join(' ').trim():sents.slice(-2).join(' ').trim();
+}
+
+/* ── HELPERS ── */
+function splitSents(text) {
+    return (text.match(/[^.!?\n]+[.!?\n]*/g)||[text]).map(s=>s.trim()).filter(s=>s.length>5);
+}
+
+// ══════════════════════════════════════════════════════════
+// SAVE
+// ══════════════════════════════════════════════════════════
+function saveCall() {
+    const r=S.rec; if(!r) return;
+    // Only save approved items; if none approved, save all non-rejected
+    let toSave=r.actionItems.filter(x=>x.status==='approved');
+    if(!toSave.length) toSave=r.actionItems.filter(x=>x.status!=='rejected');
+
+    S.calls.push({
+        id:uid(), contactName:r.contactName||'Unknown Contact',
+        date:Date.now(), duration:S.duration||0,
+        transcript:r.transcript||'', summary:r.summary||'',
+        keyTopics:r.keyTopics||[], nextSteps:r.nextSteps||'',
+        sentiment:r.sentiment||'neutral',
+        actionItems:toSave.map(a=>({...a,id:a.id||uid(),done:false})),
+    });
+    badge();
+    Object.assign(S,{sub:'idle',rec:null,blob:null,duration:0,liveText:'',triageFilter:'all'});
+    toast(`✅ Call saved with ${toSave.length} action item${toSave.length!==1?'s':''}!`);
+    go('dashboard');
+}
+
+// ══════════════════════════════════════════════════════════
+// TASKS VIEW
+// ══════════════════════════════════════════════════════════
+function filterTasks(f) {
+    S.taskFilter=f;
+    document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
+    document.getElementById(`f-${f}`)?.classList.add('active');
+    renderTasks();
+}
+function renderTasks() {
+    const c=document.getElementById('tasks-list');
+
+    // Gather call-linked tasks
+    let tasks=[];
+    S.calls.forEach(call=>call.actionItems.forEach(t=>tasks.push({...t,_src:'call',callId:call.id,cName:call.contactName,cDate:call.date})));
+
+    // Merge manual tasks
+    S.manualTasks.forEach(t=>tasks.push({...t,_src:'manual',cName:'Manual Task',cDate:t.createdAt}));
+
+    // Apply filters
+    if(S.taskFilter==='pending')   tasks=tasks.filter(t=>!t.done);
+    if(S.taskFilter==='completed') tasks=tasks.filter(t=>t.done);
+    if(S.taskFilter==='high')      tasks=tasks.filter(t=>t.priority==='high');
+    if(S.taskFilter==='mine')      tasks=tasks.filter(t=>t.owner==='Sales Rep'||t.owner==='Both');
+    if(S.taskFilter==='customer')  tasks=tasks.filter(t=>t.owner==='Customer'||t.owner==='Both');
+
+    if(!tasks.length){
+        c.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div class="empty-h">${S.taskFilter==='completed'?'No completed tasks yet':'No tasks found'}</div><div class="empty-p">Add a task with the button above, or record a call to generate them automatically.</div><button class="btn btn-primary btn-sm" onclick="toggleQuickAdd()" style="margin-right:8px">+ Add Task</button><button class="btn btn-outline btn-sm" onclick="go('new-call')">🎙️ New Call</button></div>`;
+        return;
+    }
+
+    const po={high:0,medium:1,low:2};
+    tasks.sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;return(po[a.priority]||1)-(po[b.priority]||1);});
+
+    c.innerHTML=tasks.map(t=>{
+        const isManual=t._src==='manual';
+        const sourceLabel=isManual
+            ? `<span style="background:#f1f5f9;color:var(--muted);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px">✏️ Manual</span>`
+            : `<span style="cursor:pointer;text-decoration:underline;color:var(--primary);font-size:12px" onclick="openDetail('${t.callId}')">📞 ${esc(t.cName)}</span>`;
+        const onchange=isManual
+            ? `onchange="toggleManualTask('${t.id}',this.checked)"`
+            : `onchange="toggleGT('${t.callId}','${t.id}',this.checked)"`;
+        const deleteBtn=isManual
+            ? `<button onclick="deleteManualTask('${t.id}')" style="border:none;background:none;cursor:pointer;color:#cbd5e1;font-size:16px;padding:4px 6px;line-height:1" title="Delete task">✕</button>`
+            : '';
+        const editBtn=`<button onclick="editTask('${t.id}','${t._src}','${t.callId||''}')" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px;padding:4px 6px;line-height:1" title="Edit task">✏️</button>`;
+        const notesPreview=t.notes?`<div style="font-size:12px;color:var(--muted);background:#f8fafc;border-left:3px solid var(--border);padding:5px 10px;margin-top:6px;border-radius:0 6px 6px 0;line-height:1.5">${esc(t.notes)}</div>`:'';
+        return `
+        <div class="action-item ${t.done?'done':''}" id="gt-${t.id}">
+            <input type="checkbox" class="action-checkbox" ${t.done?'checked':''} ${onchange}>
+            <div style="flex:1">
+                <div class="action-task" style="${t.done?'text-decoration:line-through':''}">${esc(t.task)}</div>
+                ${notesPreview}
+                <div class="action-meta">
+                    <span class="badge badge-${t.priority}" style="font-size:11px">${t.priority}</span>
+                    <span>${ownerIcon(t.owner)} ${esc(t.owner)}</span>
+                    ${t.dueHint?`<span class="due-hint ${isUrgent(t.dueHint,t.dueDate)?'urgent':''}">📅 ${esc(t.dueHint)}</span>`:''}
+                    · ${sourceLabel}
+                    · <span style="color:var(--muted);font-size:12px">${fmtD(t.cDate)}</span>
+                </div>
+            </div>
+            ${editBtn}${deleteBtn}
+        </div>`;
+    }).join('');
+}
+
+function toggleGT(callId,taskId,checked) {
+    toggleTask(callId,taskId,checked);
+    const row=document.getElementById(`gt-${taskId}`);
+    if(row){row.classList.toggle('done',checked);const te=row.querySelector('.action-task');if(te)te.style.textDecoration=checked?'line-through':'none';}
+}
+
+// ══════════════════════════════════════════════════════════
+// TASK UTILITY
+// ══════════════════════════════════════════════════════════
+function formatDueDate(dateStr) {
+    if (!dateStr) return '';
+    const d    = new Date(dateStr + 'T00:00:00');
+    const now  = new Date(); now.setHours(0,0,0,0);
+    const diff = Math.round((d - now) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff < 0)  return 'Overdue';
+    return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+
+function toggleManualTask(taskId, checked) {
+    const t = S.manualTasks.find(x=>x.id===taskId); if(!t) return;
+    t.done = checked; badge();
+    const row = document.getElementById(`gt-${taskId}`);
+    if(row){ row.classList.toggle('done',checked); const te=row.querySelector('.action-task'); if(te) te.style.textDecoration=checked?'line-through':'none'; }
+}
+
+function deleteManualTask(taskId) {
+    S.manualTasks = S.manualTasks.filter(t=>t.id!==taskId);
+    badge(); renderTasks();
+}
+
+// ══════════════════════════════════════════════════════════
+// ADD TASK MODAL (global — works from dashboard or tasks view)
+// ══════════════════════════════════════════════════════════
+let _atmPriority = 'medium';
+
+function openAddTaskModal() {
+    _atmPriority = 'medium';
+    ['h','m','l'].forEach(k => document.getElementById(`atm-${k}`)?.classList.remove('sel'));
+    document.getElementById('atm-m')?.classList.add('sel');
+    const el = id => document.getElementById(id);
+    el('atm-task').value  = '';
+    el('atm-notes').value = '';
+    el('atm-due').value   = '';
+    el('atm-owner').value = 'Sales Rep';
+    el('add-task-modal').style.display = 'flex';
+    setTimeout(() => el('atm-task')?.focus(), 50);
+}
+
+function closeAddTaskModal() {
+    document.getElementById('add-task-modal').style.display = 'none';
+}
+
+function setATMPrio(p) {
+    _atmPriority = p;
+    ['h','m','l'].forEach(k => document.getElementById(`atm-${k}`)?.classList.remove('sel'));
+    document.getElementById(`atm-${p[0]}`)?.classList.add('sel');
+}
+
+function saveAddTaskModal() {
+    const taskInput = document.getElementById('atm-task');
+    const task = taskInput?.value.trim();
+    if (!task) { toast('⚠️ Please enter a task description.'); taskInput?.focus(); return; }
+
+    const owner   = document.getElementById('atm-owner')?.value || 'Sales Rep';
+    const rawDate = document.getElementById('atm-due')?.value   || '';
+    const dueHint = formatDueDate(rawDate);
+    const notes   = document.getElementById('atm-notes')?.value.trim() || '';
+
+    S.manualTasks.push({
+        id: uid(), task: cap(task), owner,
+        priority: _atmPriority,
+        dueHint, dueDate: rawDate, notes,
+        done: false, createdAt: Date.now(),
+    });
+
+    badge();
+    closeAddTaskModal();
+    if (document.getElementById('view-tasks').classList.contains('active')) renderTasks();
+    else renderDash();
+    toast('✅ Task added!');
+}
+
+// ══════════════════════════════════════════════════════════
+// EDIT TASK MODAL (call-linked or manual)
+// ══════════════════════════════════════════════════════════
+let _editCtx = null; // { id, src, callId }
+let _etmPriority = 'medium';
+
+function editTask(id, src, callId) {
+    let task = null;
+    if (src === 'manual') {
+        task = S.manualTasks.find(t => t.id === id);
+    } else {
+        const call = S.calls.find(c => c.id === callId);
+        task = call?.actionItems.find(t => t.id === id);
+    }
+    if (!task) return;
+
+    _editCtx     = { id, src, callId };
+    _etmPriority = task.priority || 'medium';
+
+    document.getElementById('etm-task').value  = task.task  || '';
+    document.getElementById('etm-notes').value = task.notes || '';
+    document.getElementById('etm-due').value   = task.dueDate || '';
+    document.getElementById('etm-owner').value = task.owner || 'Sales Rep';
+
+    ['h','m','l'].forEach(k => document.getElementById(`etm-${k}`)?.classList.remove('sel'));
+    document.getElementById(`etm-${_etmPriority[0]}`)?.classList.add('sel');
+
+    document.getElementById('edit-task-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('etm-task')?.focus(), 50);
+}
+
+function closeEditTask() {
+    document.getElementById('edit-task-modal').style.display = 'none';
+    _editCtx = null;
+}
+
+function setETMPrio(p) {
+    _etmPriority = p;
+    ['h','m','l'].forEach(k => document.getElementById(`etm-${k}`)?.classList.remove('sel'));
+    document.getElementById(`etm-${p[0]}`)?.classList.add('sel');
+}
+
+function saveEditTask() {
+    if (!_editCtx) return;
+    const { id, src, callId } = _editCtx;
+
+    const taskText = document.getElementById('etm-task')?.value.trim();
+    if (!taskText) { toast('⚠️ Task description cannot be empty.'); return; }
+
+    const owner   = document.getElementById('etm-owner')?.value || 'Sales Rep';
+    const rawDate = document.getElementById('etm-due')?.value   || '';
+    const dueHint = formatDueDate(rawDate);
+    const notes   = document.getElementById('etm-notes')?.value.trim() || '';
+
+    let task = null;
+    if (src === 'manual') {
+        task = S.manualTasks.find(t => t.id === id);
+    } else {
+        const call = S.calls.find(c => c.id === callId);
+        task = call?.actionItems.find(t => t.id === id);
+    }
+    if (!task) return;
+
+    task.task     = cap(taskText);
+    task.owner    = owner;
+    task.priority = _etmPriority;
+    task.dueDate  = rawDate;
+    task.dueHint  = dueHint;
+    task.notes    = notes;
+
+    closeEditTask();
+    badge();
+    if (document.getElementById('view-tasks').classList.contains('active')) renderTasks();
+    toast('✅ Task updated!');
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+renderDash(); badge();
+</script>
+</body>
+</html>
