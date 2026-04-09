@@ -234,6 +234,29 @@
 
         /* Save bar */
         .save-bar { position: sticky; bottom: 0; background: white; border-top: 1px solid var(--border); padding: 16px 0 0; margin-top: 24px; display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
+
+        /* ── CALENDAR ── */
+        .cal-panel { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; margin-bottom: 28px; }
+        .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .cal-title  { font-size: 16px; font-weight: 900; letter-spacing: -.2px; }
+        .cal-date   { font-size: 12px; color: var(--muted); font-weight: 400; }
+        .cal-connect { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 8px; background: white; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; color: var(--text); transition: all .15s; }
+        .cal-connect:hover { border-color: #0a0a0a; }
+        .cal-connect img { width: 16px; height: 16px; }
+        .meeting-row { display: flex; align-items: flex-start; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+        .meeting-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .meeting-time { font-size: 12px; color: var(--muted); font-weight: 400; width: 80px; flex-shrink: 0; padding-top: 1px; white-space: nowrap; }
+        .meeting-dot  { width: 8px; height: 8px; border-radius: 50%; background: #0a0a0a; flex-shrink: 0; margin-top: 5px; }
+        .meeting-info { flex: 1; min-width: 0; }
+        .meeting-name { font-size: 14px; font-weight: 500; line-height: 1.4; }
+        .meeting-meta { font-size: 12px; color: var(--muted); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .meeting-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: #f5f5f5; color: #0a0a0a; }
+        .meeting-now  { background: #0a0a0a; color: white; }
+        .cal-empty { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; font-weight: 300; }
+        .cal-loading { text-align: center; padding: 20px; color: var(--muted); font-size: 13px; }
+        .cal-nav { display: flex; gap: 6px; align-items: center; }
+        .cal-nav-btn { border: 1.5px solid var(--border); background: white; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; transition: all .15s; }
+        .cal-nav-btn:hover { border-color: #0a0a0a; }
     </style>
 </head>
 <body>
@@ -249,6 +272,7 @@
         <button class="nav-item active" id="nav-dashboard" onclick="go('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
         <button class="nav-item" id="nav-new-call" onclick="go('new-call')"><span class="nav-icon">🎙️</span>New Call</button>
         <button class="nav-item" id="nav-tasks" onclick="go('tasks')"><span class="nav-icon">✅</span>All Tasks<span class="nav-badge" id="task-badge">0</span></button>
+        <button class="nav-item" id="nav-calendar" onclick="go('calendar')"><span class="nav-icon">📅</span>Calendar</button>
     </nav>
     <div class="sidebar-footer">
         <button class="nav-item" onclick="showTips()"><span class="nav-icon">💡</span>Tips</button>
@@ -265,8 +289,16 @@
         </div>
     </header>
     <div class="content">
-        <div class="view active" id="view-dashboard"><div class="stats-grid" id="stats-grid"></div><div class="sh"><h2 class="st">Recent Calls</h2></div><div id="calls-list"></div></div>
+        <div class="view active" id="view-dashboard">
+            <div class="stats-grid" id="stats-grid"></div>
+            <div id="dash-cal"></div>
+            <div class="sh"><h2 class="st">Recent Calls</h2></div>
+            <div id="calls-list"></div>
+        </div>
         <div class="view" id="view-new-call"><div id="nc"></div></div>
+        <div class="view" id="view-calendar">
+            <div id="cal-full"></div>
+        </div>
         <div class="view" id="view-tasks">
             <!-- Header row with filters + add button -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
@@ -444,8 +476,8 @@ function go(v) {
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
     document.getElementById(`view-${v}`).classList.add('active');
     const nb=document.getElementById(`nav-${v}`); if(nb) nb.classList.add('active');
-    ({'dashboard':renderDash,'new-call':renderNC,'tasks':renderTasks}[v]||renderDash)();
-    document.getElementById('page-title').textContent=({'dashboard':'Dashboard','new-call':'New Call','tasks':'All Tasks'}[v]||'');
+    ({'dashboard':renderDash,'new-call':renderNC,'tasks':renderTasks,'calendar':renderCalFull}[v]||renderDash)();
+    document.getElementById('page-title').textContent=({'dashboard':'Dashboard','new-call':'New Call','tasks':'All Tasks','calendar':'Calendar'}[v]||'');
 }
 function showTips()  { document.getElementById('tips-modal').style.display='flex'; }
 function closeTips() { document.getElementById('tips-modal').style.display='none'; }
@@ -460,6 +492,7 @@ function renderDash() {
     document.getElementById('stats-grid').innerHTML=[
         {i:'📞',v:t,l:'Total Calls'},{i:'📋',v:p,l:'Open Tasks'},{i:'✅',v:done,l:'Completed'},{i:'📅',v:week,l:'This Week'}
     ].map(s=>`<div class="stat-card"><div class="stat-icon">${s.i}</div><div class="stat-val">${s.v}</div><div class="stat-lbl">${s.l}</div></div>`).join('');
+    renderDashCal();
 
     document.getElementById('calls-list').innerHTML = !t
         ? `<div class="empty"><div class="empty-icon">📞</div><div class="empty-h">No calls yet</div><div class="empty-p">Record your first sales call to get AI-powered summaries and action items.</div><button class="btn btn-primary" onclick="go('new-call')">+ Record First Call</button></div>`
@@ -1304,6 +1337,314 @@ function saveEditTask() {
     badge();
     if (document.getElementById('view-tasks').classList.contains('active')) renderTasks();
     toast('✅ Task updated!');
+}
+
+// ══════════════════════════════════════════════════════════
+// CALENDAR — ICS/iCal integration (no OAuth needed)
+// ══════════════════════════════════════════════════════════
+
+const CAL = {
+    icsUrl:   localStorage.getItem('ns_cal_url') || '',
+    allEvents: [],
+    viewDate:  new Date(),
+    loading:   false,
+};
+
+// ── ICS PARSER ──
+function parseICSDate(fullKey, val) {
+    const v = val.trim();
+    const isUTC  = v.endsWith('Z');
+    const isDate = fullKey.toUpperCase().includes('VALUE=DATE') || !v.includes('T');
+    const s = v.replace('Z','');
+    const y=+s.substr(0,4), mo=+s.substr(4,2)-1, d=+s.substr(6,2);
+    if (isDate) return new Date(y, mo, d, 0, 0, 0);
+    const h=+s.substr(9,2), mi=+s.substr(11,2), sc=+s.substr(13,2)||0;
+    return isUTC ? new Date(Date.UTC(y,mo,d,h,mi,sc)) : new Date(y,mo,d,h,mi,sc);
+}
+function decodeICS(s) {
+    return s.replace(/\\n/g,'\n').replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\\\/g,'\\');
+}
+function parseICS(text) {
+    const unfolded = text.replace(/\r?\n[ \t]/g, '');
+    const lines = unfolded.split(/\r?\n/);
+    const events = []; let ev = null;
+    for (const line of lines) {
+        if (line === 'BEGIN:VEVENT') { ev = { attendees:0 }; continue; }
+        if (line === 'END:VEVENT')   { if (ev && ev.start) events.push(ev); ev = null; continue; }
+        if (!ev) continue;
+        const ci = line.indexOf(':'); if (ci === -1) continue;
+        const fullKey = line.substring(0, ci);
+        const val     = line.substring(ci + 1);
+        const key     = fullKey.split(';')[0].toUpperCase();
+        if      (key === 'DTSTART')     { ev.start = parseICSDate(fullKey, val); ev.allDay = !val.includes('T'); }
+        else if (key === 'DTEND')       { ev.end   = parseICSDate(fullKey, val); }
+        else if (key === 'SUMMARY')     { ev.summary     = decodeICS(val); }
+        else if (key === 'LOCATION')    { ev.location    = decodeICS(val); }
+        else if (key === 'DESCRIPTION') { ev.description = decodeICS(val); }
+        else if (key === 'URL')         { ev.url         = val.trim(); }
+        else if (key === 'STATUS')      { ev.status      = val.trim(); }
+        else if (key === 'RRULE')       { ev.rrule       = val.trim(); }
+        else if (key === 'UID')         { ev.uid         = val.trim(); }
+        else if (key === 'RECURRENCE-ID') { ev.recurrenceId = val.trim(); }
+        else if (key === 'ATTENDEE')    { ev.attendees++; }
+    }
+    return events.filter(e => e.status !== 'CANCELLED');
+}
+
+// ── RECURRING EVENT EXPANSION ──
+function expandRecurring(ev, targetDate) {
+    if (!ev.rrule) return sameDay(ev.start, targetDate) ? [ev] : [];
+    const rules = {};
+    ev.rrule.split(';').forEach(p => { const [k,v]=p.split('='); rules[k]=v; });
+    const freq = rules.FREQ; if (!freq) return [];
+    const start = ev.start;
+    const dur   = ev.end ? ev.end - ev.start : 3600000;
+    if (rules.UNTIL) {
+        const u = rules.UNTIL.replace('Z','');
+        const until = new Date(+u.substr(0,4), +u.substr(4,2)-1, +u.substr(6,2));
+        if (targetDate > until) return [];
+    }
+    const makeOcc = () => {
+        const s = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(),
+                           start.getHours(), start.getMinutes(), start.getSeconds());
+        return { ...ev, start: s, end: new Date(s.getTime() + dur) };
+    };
+    const interval = parseInt(rules.INTERVAL||'1');
+    if (freq === 'DAILY') {
+        const diff = Math.round((midnight(targetDate) - midnight(start)) / 86400000);
+        return diff >= 0 && diff % interval === 0 ? [makeOcc()] : [];
+    }
+    if (freq === 'WEEKLY') {
+        const days = ['SU','MO','TU','WE','TH','FR','SA'];
+        const byDay = rules.BYDAY ? rules.BYDAY.split(',') : [days[start.getDay()]];
+        if (!byDay.includes(days[targetDate.getDay()])) return [];
+        const sw = midnight(start); sw.setDate(sw.getDate() - sw.getDay());
+        const tw = midnight(targetDate); tw.setDate(tw.getDate() - tw.getDay());
+        const diffW = Math.round((tw - sw) / (7*86400000));
+        return diffW >= 0 && diffW % interval === 0 ? [makeOcc()] : [];
+    }
+    if (freq === 'MONTHLY') {
+        if (start.getDate() !== targetDate.getDate()) return [];
+        const diffM = (targetDate.getFullYear()-start.getFullYear())*12 + (targetDate.getMonth()-start.getMonth());
+        return diffM >= 0 && diffM % interval === 0 ? [makeOcc()] : [];
+    }
+    return [];
+}
+function midnight(d) { const x=new Date(d); x.setHours(0,0,0,0); return x; }
+function sameDay(a, b) { return a && b && midnight(a).getTime() === midnight(b).getTime(); }
+
+// ── GET EVENTS FOR A DAY ──
+function getEventsForDay(date) {
+    const d = midnight(new Date(date));
+    const overrideDates = new Set(CAL.allEvents.filter(e=>e.recurrenceId).map(e=>e.uid+'_'+d.getTime()));
+    const results = [];
+    CAL.allEvents.forEach(ev => {
+        if (ev.recurrenceId) { if (sameDay(ev.start, d)) results.push(ev); return; }
+        if (overrideDates.has(ev.uid+'_'+d.getTime())) return; // this occurrence is overridden
+        const expanded = expandRecurring(ev, d);
+        results.push(...expanded);
+    });
+    results.sort((a,b) => { if (a.allDay && !b.allDay) return -1; if (!a.allDay && b.allDay) return 1; return a.start - b.start; });
+    return results;
+}
+
+// ── FETCH ICS ──
+async function calFetch(url) {
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxy);
+    if (!res.ok) throw new Error('Fetch failed');
+    const json = await res.json();
+    return json.contents;
+}
+
+async function calConnect() {
+    const urlInput = document.getElementById('cal-url-input');
+    const url = urlInput?.value.trim();
+    if (!url) { toast('⚠️ Please paste your calendar URL first.'); return; }
+    if (!url.includes('calendar.google.com') && !url.includes('.ics')) {
+        toast('⚠️ That doesn\'t look like a calendar URL — check you copied the iCal link.'); return;
+    }
+    CAL.loading = true; renderDashCal(); renderCalFull();
+    try {
+        const text = await calFetch(url);
+        CAL.allEvents = parseICS(text);
+        CAL.icsUrl = url;
+        localStorage.setItem('ns_cal_url', url);
+        toast(`✅ Calendar synced — ${CAL.allEvents.length} events loaded`);
+    } catch(e) {
+        toast('❌ Could not load calendar. Check the URL and try again.'); CAL.loading = false;
+        renderDashCal(); return;
+    }
+    CAL.loading = false;
+    renderDashCal();
+    if (document.getElementById('view-calendar').classList.contains('active')) renderCalFull();
+}
+
+function calDisconnect() {
+    CAL.icsUrl = ''; CAL.allEvents = [];
+    localStorage.removeItem('ns_cal_url');
+    renderDashCal();
+    if (document.getElementById('view-calendar').classList.contains('active')) renderCalFull();
+    toast('Calendar disconnected.');
+}
+
+async function calRefresh() {
+    if (!CAL.icsUrl) return;
+    toast('🔄 Refreshing calendar...');
+    try {
+        const text = await calFetch(CAL.icsUrl);
+        CAL.allEvents = parseICS(text);
+        localStorage.setItem('ns_cal_url', CAL.icsUrl);
+        toast(`✅ Refreshed — ${CAL.allEvents.length} events`);
+    } catch(e) { toast('❌ Refresh failed.'); return; }
+    renderDashCal();
+    if (document.getElementById('view-calendar').classList.contains('active')) renderCalFull();
+}
+
+// ── HELPERS ──
+function fmtTime(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+}
+function fmtDateHeader(date) {
+    const today = midnight(new Date());
+    const d = midnight(new Date(date));
+    const diff = Math.round((d - today) / 86400000);
+    const dayStr = new Date(date).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+    if (diff === 0) return `Today — ${dayStr}`;
+    if (diff === 1) return `Tomorrow — ${dayStr}`;
+    if (diff === -1) return `Yesterday — ${dayStr}`;
+    return dayStr;
+}
+function isMeetingNow(ev) {
+    const now = Date.now();
+    return ev.start && ev.end && ev.start <= now && ev.end >= now;
+}
+
+// ── MEETING ROW HTML ──
+function meetingRowHTML(ev) {
+    const start = ev.allDay ? 'All day' : fmtTime(ev.start);
+    const end   = ev.allDay ? '' : fmtTime(ev.end);
+    const timeStr = end ? `${start} – ${end}` : start;
+    const now = isMeetingNow(ev);
+    const loc = ev.location ? `<span>📍 ${esc(ev.location.split(',')[0].substring(0,40))}</span>` : '';
+    // Extract Google Meet link from description or URL
+    const meetLink = (ev.description||'').match(/https:\/\/meet\.google\.com\/[a-z-]+/)?.[0] || (ev.url||'').match(/https:\/\/meet\.google\.com\/[a-z-]+/)?.[0] || ev.url || '';
+    const link = meetLink ? `<a href="${meetLink}" target="_blank" style="color:#0a0a0a;font-weight:500;text-decoration:none">🎥 Join</a>` : '';
+    return `
+    <div class="meeting-row">
+        <div class="meeting-time">${esc(timeStr)}</div>
+        <div class="meeting-dot" style="${now?'background:#16a34a':''}"></div>
+        <div class="meeting-info">
+            <div class="meeting-name">${esc(ev.summary||'(No title)')}</div>
+            <div class="meeting-meta">
+                ${now?'<span class="meeting-badge meeting-now">● Live now</span>':''}
+                ${ev.attendees>1?`<span>👥 ${ev.attendees}</span>`:''}
+                ${loc}${link}
+            </div>
+        </div>
+    </div>`;
+}
+
+// ── CONNECT PANEL HTML ──
+function calConnectPanelHTML(compact=false) {
+    if (compact) return `
+    <div class="cal-panel" style="padding:16px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div>
+                <div style="font-size:15px;font-weight:900;letter-spacing:-.2px;margin-bottom:3px">📅 Today's Schedule</div>
+                <div style="font-size:12px;color:var(--muted);font-weight:300">Paste your Google Calendar iCal link to see meetings here</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="go('calendar')">Connect →</button>
+        </div>
+    </div>`;
+    return `
+    <div class="cal-panel" style="max-width:600px;margin:0 auto">
+        <div style="font-size:20px;font-weight:900;margin-bottom:6px;letter-spacing:-.3px">📅 Connect Google Calendar</div>
+        <div style="font-size:14px;color:var(--muted);font-weight:300;margin-bottom:24px;line-height:1.6">
+            Paste your Google Calendar's secret iCal link below. Each person uses their own link — no logins or permissions needed.
+        </div>
+        <div style="background:#fafafa;border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:20px;font-size:13px;line-height:1.8;font-weight:300">
+            <strong style="font-weight:600">How to get your iCal link:</strong><br>
+            1. Open <a href="https://calendar.google.com" target="_blank" style="color:#0a0a0a">Google Calendar</a> → click the ⚙️ gear icon → <strong>Settings</strong><br>
+            2. Click your calendar name on the left under "My calendars"<br>
+            3. Scroll down to <strong>"Secret address in iCal format"</strong><br>
+            4. Click the copy icon and paste the link below
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input type="url" id="cal-url-input" class="form-input" placeholder="https://calendar.google.com/calendar/ical/..." style="flex:1">
+            <button class="btn btn-primary" onclick="calConnect()">Connect</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);font-weight:300">🔒 Your link stays in your browser — it's never sent to any server other than Google.</div>
+    </div>`;
+}
+
+// ── DASHBOARD STRIP ──
+function renderDashCal() {
+    const el = document.getElementById('dash-cal'); if (!el) return;
+    if (!CAL.icsUrl) { el.innerHTML = calConnectPanelHTML(true); return; }
+    if (CAL.loading) { el.innerHTML = `<div class="cal-panel"><div class="cal-loading">Loading calendar...</div></div>`; return; }
+
+    const today = new Date();
+    const events = getEventsForDay(today);
+    el.innerHTML = `
+    <div class="cal-panel">
+        <div class="cal-header">
+            <div>
+                <div class="cal-title">📅 Today's Schedule</div>
+                <div class="cal-date">${fmtDateHeader(today)}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn btn-outline btn-sm" onclick="go('calendar')">View all →</button>
+                <button class="btn-ghost" onclick="calRefresh()" style="font-size:12px">↻ Refresh</button>
+                <button class="btn-ghost" onclick="calDisconnect()" style="font-size:12px;color:var(--muted)">Disconnect</button>
+            </div>
+        </div>
+        ${events.length ? events.map(meetingRowHTML).join('') : '<div class="cal-empty">No meetings today 🎉</div>'}
+    </div>`;
+}
+
+// ── FULL CALENDAR VIEW ──
+async function renderCalFull() {
+    const el = document.getElementById('cal-full'); if (!el) return;
+    if (!CAL.icsUrl) { el.innerHTML = calConnectPanelHTML(false); return; }
+    if (CAL.loading) { el.innerHTML = `<div class="cal-panel"><div class="cal-loading" style="padding:40px">Loading...</div></div>`; return; }
+
+    const events = getEventsForDay(CAL.viewDate);
+    el.innerHTML = `
+    <div class="cal-panel">
+        <div class="cal-header">
+            <div>
+                <div class="cal-title">${fmtDateHeader(CAL.viewDate)}</div>
+                <div class="cal-date">${events.length} meeting${events.length!==1?'s':''}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <div class="cal-nav">
+                    <button class="cal-nav-btn" onclick="calNavDay(-1)">‹</button>
+                    <button class="btn btn-outline btn-sm" onclick="calNavToday()">Today</button>
+                    <button class="cal-nav-btn" onclick="calNavDay(1)">›</button>
+                </div>
+                <button class="btn-ghost" onclick="calRefresh()" style="font-size:12px">↻ Refresh</button>
+                <button class="btn-ghost" onclick="calDisconnect()" style="font-size:12px;color:var(--muted)">Disconnect</button>
+            </div>
+        </div>
+        ${events.length ? events.map(meetingRowHTML).join('') : '<div class="cal-empty">No meetings on this day 🎉</div>'}
+    </div>`;
+}
+
+function calNavDay(delta) {
+    CAL.viewDate = new Date(CAL.viewDate);
+    CAL.viewDate.setDate(CAL.viewDate.getDate() + delta);
+    renderCalFull();
+}
+function calNavToday() { CAL.viewDate = new Date(); renderCalFull(); }
+
+// Auto-load saved calendar on startup
+if (CAL.icsUrl) {
+    calFetch(CAL.icsUrl).then(text => {
+        CAL.allEvents = parseICS(text);
+        renderDashCal();
+    }).catch(() => { CAL.icsUrl = ''; localStorage.removeItem('ns_cal_url'); });
 }
 
 // ══════════════════════════════════════════════════════════
