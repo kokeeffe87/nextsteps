@@ -1448,13 +1448,36 @@ function getEventsForDay(date) {
     return results;
 }
 
-// ── FETCH ICS ──
+// ── FETCH ICS — tries multiple CORS proxies ──
 async function calFetch(url) {
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxy);
-    if (!res.ok) throw new Error('Fetch failed');
-    const json = await res.json();
-    return json.contents;
+    const proxies = [
+        async (u) => {
+            const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`);
+            if (!r.ok) throw new Error(r.status);
+            return r.text();
+        },
+        async (u) => {
+            const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`);
+            if (!r.ok) throw new Error(r.status);
+            const j = await r.json();
+            if (!j.contents) throw new Error('empty');
+            return j.contents;
+        },
+        async (u) => {
+            const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`);
+            if (!r.ok) throw new Error(r.status);
+            return r.text();
+        },
+    ];
+    let lastErr;
+    for (const proxy of proxies) {
+        try {
+            const text = await proxy(url);
+            if (text && text.includes('BEGIN:VCALENDAR')) return text;
+            throw new Error('not a calendar');
+        } catch(e) { lastErr = e; }
+    }
+    throw lastErr || new Error('All proxies failed');
 }
 
 async function calConnect() {
@@ -1464,20 +1487,30 @@ async function calConnect() {
     if (!url.includes('calendar.google.com') && !url.includes('.ics')) {
         toast('⚠️ That doesn\'t look like a calendar URL — check you copied the iCal link.'); return;
     }
-    CAL.loading = true; renderDashCal(); renderCalFull();
+    CAL.loading = true;
+    const el = document.getElementById('cal-full');
+    if (el) el.innerHTML = `<div class="cal-panel"><div class="cal-loading" style="padding:40px">🔄 Connecting to your calendar...</div></div>`;
     try {
         const text = await calFetch(url);
         CAL.allEvents = parseICS(text);
         CAL.icsUrl = url;
         localStorage.setItem('ns_cal_url', url);
+        CAL.loading = false;
         toast(`✅ Calendar synced — ${CAL.allEvents.length} events loaded`);
     } catch(e) {
-        toast('❌ Could not load calendar. Check the URL and try again.'); CAL.loading = false;
-        renderDashCal(); return;
+        CAL.loading = false;
+        if (el) el.innerHTML = `<div class="cal-panel" style="max-width:600px;margin:0 auto">
+            <div style="font-size:16px;font-weight:900;margin-bottom:10px;color:var(--danger)">❌ Could not load calendar</div>
+            <div style="font-size:14px;color:var(--muted);font-weight:300;line-height:1.7;margin-bottom:16px">
+                This is usually caused by the URL being incorrect. Please double-check you copied the <strong style="font-weight:600">Secret address in iCal format</strong> (not the public calendar URL).<br><br>
+                Go back to Google Calendar → Settings → your calendar → scroll to the bottom → copy the <strong style="font-weight:600">Secret address in iCal format</strong>.
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="renderCalFull()">← Try again</button>
+        </div>`;
+        return;
     }
-    CAL.loading = false;
     renderDashCal();
-    if (document.getElementById('view-calendar').classList.contains('active')) renderCalFull();
+    renderCalFull();
 }
 
 function calDisconnect() {
@@ -1641,10 +1674,17 @@ function calNavToday() { CAL.viewDate = new Date(); renderCalFull(); }
 
 // Auto-load saved calendar on startup
 if (CAL.icsUrl) {
+    CAL.loading = true;
     calFetch(CAL.icsUrl).then(text => {
         CAL.allEvents = parseICS(text);
+        CAL.loading = false;
         renderDashCal();
-    }).catch(() => { CAL.icsUrl = ''; localStorage.removeItem('ns_cal_url'); });
+    }).catch(() => {
+        CAL.loading = false;
+        CAL.icsUrl = '';
+        localStorage.removeItem('ns_cal_url');
+        renderDashCal();
+    });
 }
 
 // ══════════════════════════════════════════════════════════
